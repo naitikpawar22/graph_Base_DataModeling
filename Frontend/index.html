@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP O2C Graph & AI Chat</title>
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #1a1b26;
+            --panel-bg: rgba(26, 27, 38, 0.85);
+            --text-primary: #c0caf5;
+            --text-secondary: #a9b1d6;
+            --accent: #7aa2f7;
+            --border: rgba(65, 72, 104, 0.4);
+            --chat-user: #2ac3de;
+            --chat-ai: #bb9af7;
+            --glass: rgba(36, 40, 59, 0.7);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 10px 20px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #9ece6a;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #9ece6a;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(0.95);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        button {
+            background: var(--border);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(5px);
+        }
+
+        button:hover {
+            background: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(122, 162, 247, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at top right, #1f2335 0%, #1a1b26 100%);
+        }
+
+        #cy {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* Panels */
+        .sidebar-left,
+        .chat-panel {
+            width: 320px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            height: calc(100% - 20px);
+            margin: 10px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, width 0.3s ease;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+            color: #fff;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .panel-content {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Chat Specifics */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 10px 5px;
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            max-width: 90%;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg.user {
+            background: linear-gradient(135deg, #2ac3de 0%, #1a8e9e 100%);
+            color: #000;
+            font-weight: 500;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px rgba(42, 195, 222, 0.2);
+        }
+
+        .msg.ai {
+            background: rgba(187, 154, 247, 0.1);
+            border: 1px solid rgba(187, 154, 247, 0.2);
+            color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .chat-input-area input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.1);
+        }
+
+        .intent-tag {
+            font-size: 0.6rem;
+            background: var(--chat-ai);
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: inline-block;
+            letter-spacing: 0.05em;
+        }
+
+        .insight-box {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(122, 162, 247, 0.05);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            color: #7aa2f7;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .chat-input-area button:not(:disabled) {
+            animation: shadowPulse 2s infinite;
+        }
+
+        @keyframes shadowPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(122, 162, 247, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(122, 162, 247, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(122, 162, 247, 0);
+            }
+        }
+
+        .property:hover {
+            transform: translateX(4px);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .prop-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .prop-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #fff;
+            word-break: break-all;
+        }
+
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 12px 24px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--accent);
+            border-radius: 30px;
+            color: #fff;
+            font-weight: 600;
+            z-index: 200;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-chat-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            font-size: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .sidebar-left {
+                display: none;
+            }
+
+            .chat-panel {
+                position: fixed;
+                top: 70px;
+                right: 10px;
+                bottom: 10px;
+                height: auto;
+                width: 350px;
+                transform: translateX(400px);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .chat-panel.active {
+                transform: translateX(0);
+            }
+
+            .mobile-chat-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .chat-panel {
+                width: calc(100% - 20px);
+                right: 10px;
+                left: 10px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .expanded-badge {
+            font-size: 0.6rem;
+            background: #9ece6a;
+            color: #000;
+            padding: 1px 5px;
+            border-radius: 10px;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        .level-badge {
+            font-size: 0.6rem;
+            background: #7aa2f7;
+            color: #fff;
+            padding: 1px 5px;
+            border-radius: 10px;
+            font-weight: 700;
+            margin-left: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>
+            <div class="pulse-dot"></div> SAP O2C Explorer & AI
+        </h1>
+        <div>
+            <button id="btn-reset" style="background: #f7768e; margin-right: 10px; display: none;">↻ Reset View</button>
+            <button id="btn-layout" style="display: none;">⚙ Re-Layout</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar-left">
+            <div class="panel-header">Inspector</div>
+            <div class="panel-content" id="node-details">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin-top: 20px;">
+                    <b style="color: #fff">Tap nodes</b> once to expand connections.<br><br>
+                    <b style="color: #fff">Double tap nodes</b> to view detailed properties.
+                </p>
+            </div>
+
+            <div
+                style="padding: 15px; border-top: 1px solid var(--border); font-size: 0.75rem; line-height: 1.8; max-height: 250px; overflow-y: auto;">
+                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">Node Legend</div>
+                <b style="color:#ff9e64">Customer</b> | <b style="color:#9ece6a">Order</b> | <b
+                    style="color:#7aa2f7">OrderItem</b><br>
+                <b style="color:#bb9af7">Product</b> | <b style="color:#e0af68">Delivery</b> | <b
+                    style="color:#f7768e">Invoice</b><br>
+                <b style="color:#ff757f">JournalEntry</b> | <b style="color:#4fd6be">Payment</b> | <b
+                    style="color:#00b5e2">Address</b>
+            </div>
+        </div>
+
+        <div id="loader" class="loader" style="display: block;">Loading Graph...</div>
+        <div id="cy"></div>
+
+        <div class="chat-panel" id="chat-panel">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size: 1.2rem;">🤖</span> AI Agent
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span
+                        style="font-size: 0.6rem; background:rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 8px; color: var(--text-secondary);">Llama-3.3</span>
+                    <button id="btn-clear-chat" style="padding: 4px; background:transparent; border:none; opacity:0.6;"
+                        title="Clear Chat">🗑️</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="msg ai">
+                        <div class="intent-tag">Welcome</div>
+                        Hello! I am your SAP O2C intelligence agent. I can help you trace flows, analyze product
+                        performance, and find bottlenecks.<br><br>
+                        <b>Try asking:</b><br>
+                        • "Trace billing document 91150083"<br>
+                        • "Which products have the most bills?"<br>
+                        • "Find orders with no delivery"
+                    </div>
+                </div>
+            </div>
+            <form class="chat-input-area" id="chat-form">
+                <input type="text" id="chat-input" placeholder="Ask about the O2C flow..." autocomplete="off">
+                <button type="submit" id="chat-submit"
+                    style="background: var(--accent); color: #000; padding: 10px 18px;">
+                    <span>Send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <button class="mobile-chat-toggle" id="mobile-chat-toggle">💬</button>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
