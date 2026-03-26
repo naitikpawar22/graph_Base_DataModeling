@@ -8,6 +8,9 @@
 A high-performance, real-time Order-to-Cash (O2C) analytical dashboard. This system constructs a complex business flow graph from SAP data stored in MongoDB Atlas and allows for natural language exploration using a strictly-guarded AI analytical brain.
 
 ---
+## 🌐 Live Demo
+
+🔗 [View Live Project](https://graph-base-datamodeling-1.onrender.com/)
 
 ## 🚀 Key Features
 
