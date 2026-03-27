@@ -15,7 +15,7 @@ app.use('/', routes);
 // Initialize Headless Database automatically
 db.initDb().then(() => {
     app.listen(3000, () => {
-         console.log("Modular Headless Cytoscape System Active: http://localhost:3000");
+         console.log("Modular Headless Cytoscape System Active: http://graph-base-datamodeling.onrender.com");
     });
 }).catch(err => {
     console.error("Failed to initialize Graph:", err);
