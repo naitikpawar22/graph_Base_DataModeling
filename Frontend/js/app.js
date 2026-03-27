@@ -123,7 +123,7 @@ function initCytoscape(data) {
                 expansionLevels.set(nodeId, 1);
                 loader.style.display = 'block';
                 loader.innerText = 'Expanding level 1...';
-                fetch(`http://graph-base-datamodeling.onrender.com/graph/expand/${encodeURIComponent(nodeId)}`)
+                fetch(`https://graph-base-datamodeling.onrender.com/graph/expand/${encodeURIComponent(nodeId)}`)
                     .then(r => r.json())
                     .then(newData => {
                         loader.style.display = 'none';
@@ -169,7 +169,7 @@ function expandToLevel2(node) {
     loader.style.display = 'block';
     loader.innerText = 'Expanding level 2...';
     const level2Promises = currentNeighbors.nodes().map(neighbor =>
-        fetch(`http://graph-base-datamodeling.onrender.com/graph/expand/${encodeURIComponent(neighbor.id())}`)
+        fetch(`https://graph-base-datamodeling.onrender.com/graph/expand/${encodeURIComponent(neighbor.id())}`)
             .then(r => r.json())
             .catch(() => ({ nodes: [], edges: [] }))
     );
@@ -260,7 +260,7 @@ function loadGraphNow() {
     if (graphInitialized) return;
     loader.style.display = 'block';
     loader.innerText = 'Loading Graph (may take 5-10 seconds)...';
-    fetch('http://graph-base-datamodeling.onrender.com/graph')
+    fetch('https://graph-base-datamodeling.onrender.com/graph')
         .then(res => res.json())
         .then(data => {
             initCytoscape(data);
@@ -279,7 +279,7 @@ document.getElementById('btn-reset').onclick = () => {
     expansionLevels.clear();
     loader.style.display = 'block';
     loader.innerText = 'Reloading...';
-    fetch('http://graph-base-datamodeling.onrender.com/graph')
+    fetch('https://graph-base-datamodeling.onrender.com/graph')
         .then(res => res.json())
         .then(data => {
             if (cy) cy.destroy();
@@ -321,7 +321,7 @@ chatForm.onsubmit = async (e) => {
     let fullText = "";
 
     try {
-        const response = await fetch(`http://graph-base-datamodeling.onrender.com/chat?message=${encodeURIComponent(msg)}`);
+        const response = await fetch(`https://graph-base-datamodeling.onrender.com/chat?message=${encodeURIComponent(msg)}`);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
